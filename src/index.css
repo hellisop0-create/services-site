@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #0F172A;
+  --color-secondary: #2563EB;
+  --color-accent: #22C55E;
+  --color-high-bg: #F8FAFC;
+  --color-high-text: #1E293B;
+  --color-high-muted: #64748B;
+  --color-high-border: #E2E8F0;
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-high-bg text-high-text;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}

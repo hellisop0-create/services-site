@@ -1,0 +1,6 @@
+{
+  "name": "PakServ Home Services",
+  "description": "A comprehensive home services marketplace for Pakistan connect clients with local professional workers.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": []
+}

@@ -1,0 +1,55 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "System user account",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["client", "worker", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Worker": {
+      "title": "Worker Profile",
+      "description": "Professional profile for service providers",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "profileImage": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "city": { "type": "string" },
+        "area": { "type": "string" },
+        "category": { "type": "string" },
+        "experience": { "type": "integer" },
+        "bio": { "type": "string" },
+        "isApproved": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "category", "city", "phoneNumber"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of all users"
+    },
+    "/workers/{workerId}": {
+      "schema": "Worker",
+      "description": "Public professional profiles of workers"
+    },
+    "/admins/{adminId}": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "uid": { "type": "string" }
+        }
+      },
+      "description": "Authorized admin users"
+    }
+  }
+}
