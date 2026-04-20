@@ -16,7 +16,7 @@ const AdminNavOption: React.FC<{ isAdmin: boolean; mobile?: boolean; onClose?: (
 
   const handleAccess = (e: React.FormEvent) => {
     e.preventDefault();
-    const secret = (import.meta as any).env.VITE_ADMIN_PASSWORD || 'admin123';
+    const secret = (import.meta as any).env.VITE_ADMIN_PASSWORD || 'zaheer121';
     // If already admin or password matches
     if (isAdmin || password === secret) {
       if (onClose) onClose();
