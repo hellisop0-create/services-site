@@ -305,28 +305,32 @@ const Home: React.FC = () => {
       </main>
 
       {user && (
-        <div className="fixed bottom-8 right-8 z-50">
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => navigate('/chats')}
-            className="relative p-5 bg-primary text-white rounded-full shadow-2xl border-2 border-white flex items-center justify-center group"
+  <div className="fixed bottom-8 right-8 z-50">
+    <motion.button
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      onClick={() => navigate('/chats')} // Redirects to the list of all your chats
+      className="relative p-4 bg-primary text-white rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-white/20 flex items-center justify-center group overflow-hidden"
+    >
+      {/* Subtle Gradient Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-tr from-primary to-secondary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      
+      <MessageSquare className="h-6 w-6 relative z-10" />
+      
+      <AnimatePresence>
+        {chatCount > 0 && (
+          <motion.span
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="absolute -top-1 -right-1 bg-accent text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm z-20"
           >
-            <MessageSquare className="h-6 w-6" />
-            <AnimatePresence>
-              {chatCount > 0 && (
-                <motion.span
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="absolute -top-1 -right-1 bg-secondary text-white text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-sm"
-                >
-                  {chatCount}
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </motion.button>
-        </div>
-      )}
+            {chatCount}
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </motion.button>
+  </div>
+)}
     </div>
   );
 };

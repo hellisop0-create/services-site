@@ -57,48 +57,66 @@ const ChatBox: React.FC<ChatBoxProps> = ({ chatId, currentUser }) => {
   };
 
   return (
-    <div className="flex flex-col h-[600px] w-full max-w-2xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
-      {/* Header */}
-      <div className="bg-primary p-4 text-white flex justify-between items-center">
-        <h3 className="font-bold uppercase text-xs tracking-widest">Live Chat Session</h3>
-        {isAdmin && (
-          <div className="flex items-center gap-1 bg-red-500/20 px-2 py-1 rounded text-[10px] font-black uppercase">
-            <ShieldAlert size={12} /> Admin Mode
-          </div>
-        )}
+  <div className="flex flex-col h-[70vh] w-full max-w-3xl mx-auto bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 overflow-hidden">
+    {/* Professional Header */}
+    <div className="bg-white border-b border-slate-100 p-5 flex justify-between items-center">
+      <div className="flex items-center gap-3">
+        <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-primary">
+          <MessageSquare size={20} />
+        </div>
+        <div>
+          <h3 className="font-bold text-slate-800 text-sm">Secure Message Session</h3>
+          <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">End-to-end Encrypted</p>
+        </div>
       </div>
+      
+      {isAdmin && (
+        <div className="flex items-center gap-1.5 bg-red-50 text-red-600 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border border-red-100">
+          <ShieldAlert size={12} /> Admin Support
+        </div>
+      )}
+    </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50">
-        {messages.map((msg) => (
-          <div key={msg.id} className={`flex ${msg.senderId === currentUser.uid ? 'justify-end' : 'justify-start'}`}>
-            <div className={`group relative max-w-[80%] p-3 rounded-2xl text-sm shadow-sm ${
-              msg.senderId === currentUser.uid 
-                ? 'bg-primary text-white rounded-tr-none' 
-                : 'bg-white text-slate-800 border border-slate-200 rounded-tl-none'
-            }`}>
-              <p className="text-[9px] font-black opacity-50 uppercase mb-1">{msg.senderName}</p>
-              <p className="leading-relaxed">{msg.text}</p>
+    {/* Messages Area */}
+    <div className="flex-1 overflow-y-auto p-8 space-y-6 bg-[#f8fafc]">
+      {messages.map((msg) => {
+        const isMe = msg.senderId === currentUser.uid;
+        return (
+          <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[75%] space-y-1`}>
+              <p className={`text-[10px] font-bold text-slate-400 uppercase px-1 ${isMe ? 'text-right' : 'text-left'}`}>
+                {isMe ? 'You' : msg.senderName}
+              </p>
+              <div className={`p-4 rounded-2xl text-[14px] leading-relaxed shadow-sm ${
+                isMe 
+                  ? 'bg-primary text-white rounded-tr-none shadow-blue-100' 
+                  : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'
+              }`}>
+                {msg.text}
+              </div>
             </div>
           </div>
-        ))}
-        <div ref={scrollRef} />
-      </div>
+        );
+      })}
+      <div ref={scrollRef} />
+    </div>
 
-      {/* Footer / Input */}
-      <form onSubmit={handleSend} className="p-4 bg-white border-t border-slate-100 flex gap-2">
+    {/* Professional Input Field */}
+    <div className="p-4 bg-white border-t border-slate-50">
+      <form onSubmit={handleSend} className="relative flex items-center">
         <input 
-          className="flex-1 bg-slate-100 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary outline-none"
-          placeholder={isAdmin ? "Type an official admin message..." : "Type your message..."}
+          className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-5 pr-14 py-4 text-sm focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all outline-none text-slate-700"
+          placeholder="Write your message..."
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
         />
-        <button className="bg-secondary text-white p-3 rounded-xl hover:shadow-lg transition-all active:scale-95">
+        <button className="absolute right-2 bg-primary text-white p-2.5 rounded-xl hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20">
           <Send size={18} />
         </button>
       </form>
     </div>
-  );
+  </div>
+);
 };
 
 export default ChatBox;
