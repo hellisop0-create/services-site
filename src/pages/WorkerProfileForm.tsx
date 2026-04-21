@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, collection, query, where, getDocs, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage, auth } from '../firebase/config';
 import { useAuth } from '../hooks/useAuth';
 import { CATEGORIES, PAK_CITIES, WorkerProfile } from '../types';
-import { Camera, Save, AlertCircle, CheckCircle } from 'lucide-react';
+import { Camera, Save, AlertCircle, CheckCircle, MessageSquare } from 'lucide-react';
 import { motion } from 'motion/react';
 
 const WorkerProfileForm: React.FC = () => {
@@ -41,6 +41,39 @@ const WorkerProfileForm: React.FC = () => {
     }
   }, [user]);
 
+  // NEW: Logic to start a chat (Used for testing or from a Client view)
+  const handleContactWorker = async () => {
+    if (!user) return alert("Please login");
+    setLoading(true);
+    try {
+      const chatsRef = collection(db, 'chats');
+      const q = query(
+        chatsRef, 
+        where('clientId', '==', user.uid), 
+        where('workerId', '==', formData.uid)
+      );
+      const existing = await getDocs(q);
+
+      if (!existing.empty) {
+        navigate(`/chat/${existing.docs[0].id}`);
+      } else {
+        const newChat = await addDoc(chatsRef, {
+          clientId: user.uid,
+          clientEmail: user.email,
+          workerId: formData.uid,
+          workerName: formData.name,
+          createdAt: serverTimestamp(),
+          lastMessage: 'New inquiry started',
+        });
+        navigate(`/chat/${newChat.id}`);
+      }
+    } catch (err) {
+      setError('Could not initiate chat');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
@@ -73,7 +106,6 @@ const WorkerProfileForm: React.FC = () => {
         updatedAt: serverTimestamp(),
       };
 
-      // If it's a new profile, set defaults
       if (!formData.status) {
         Object.assign(workerData, {
           isApproved: false,
@@ -121,7 +153,6 @@ const WorkerProfileForm: React.FC = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Profile Image */}
           <div className="flex flex-col items-center gap-4 p-8 bg-high-bg rounded-xl border border-high-border">
             <div className="relative group">
               <img
@@ -224,14 +255,27 @@ const WorkerProfileForm: React.FC = () => {
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-secondary text-white font-black uppercase tracking-[0.2em] py-4 rounded-lg hover:bg-secondary/90 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-100 active:translate-y-px"
-          >
-            <Save className="h-4 w-4" />
-            {loading ? 'Processing...' : 'Deploy Profile'}
-          </button>
+          <div className="flex flex-col gap-3">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-secondary text-white font-black uppercase tracking-[0.2em] py-4 rounded-lg hover:bg-secondary/90 disabled:opacity-50 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-100 active:translate-y-px"
+            >
+              <Save className="h-4 w-4" />
+              {loading ? 'Processing...' : 'Deploy Profile'}
+            </button>
+
+            {/* Test Message Button */}
+            <button
+              type="button"
+              onClick={handleContactWorker}
+              disabled={loading || !formData.uid}
+              className="w-full bg-primary text-white font-black uppercase tracking-[0.2em] py-4 rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+            >
+              <MessageSquare className="h-4 w-4" />
+              Test Chat System
+            </button>
+          </div>
         </form>
       </motion.div>
     </div>
