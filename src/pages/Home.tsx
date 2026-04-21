@@ -1,20 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { collection, query, where, onSnapshot, orderBy, addDoc, getDocs, serverTimestamp } from 'firebase/firestore';
+import { db, auth } from '../firebase/config';
 import { WorkerProfile, CATEGORIES, PAK_CITIES } from '../types';
-import { Search, MapPin, Briefcase, Star, Phone, Filter, X } from 'lucide-react';
+import { Search, MapPin, Briefcase, Star, Phone, Filter, X, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
 const Home: React.FC = () => {
+  const { user, profile } = useAuth();
+  const navigate = useNavigate();
   const [workers, setWorkers] = useState<WorkerProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [selectedCity, setSelectedCity] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
+  const [chatCount, setChatCount] = useState(0);
 
   useEffect(() => {
-    // Only fetch approved workers for clients
     const q = query(
       collection(db, 'workers'),
       where('isApproved', '==', true),
@@ -30,6 +34,39 @@ const Home: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
+  // Monitor total active chats for the floating icon badge
+  useEffect(() => {
+    if (!user) return;
+    const q = query(
+      collection(db, 'chats'),
+      where(profile?.role === 'worker' ? 'workerId' : 'clientId', '==', user.uid)
+    );
+    const unsub = onSnapshot(q, (snap) => setChatCount(snap.size));
+    return () => unsub();
+  }, [user, profile]);
+
+  const handleStartChat = async (worker: WorkerProfile) => {
+    if (!user) return alert("Please login to message workers");
+    
+    const chatsRef = collection(db, 'chats');
+    const q = query(chatsRef, where('clientId', '==', user.uid), where('workerId', '==', worker.uid));
+    const existing = await getDocs(q);
+
+    if (!existing.empty) {
+      navigate(`/chat/${existing.docs[0].id}`);
+    } else {
+      const newChat = await addDoc(chatsRef, {
+        clientId: user.uid,
+        clientEmail: user.email,
+        workerId: worker.uid,
+        workerName: worker.name,
+        createdAt: serverTimestamp(),
+        lastMessage: 'New inquiry started',
+      });
+      navigate(`/chat/${newChat.id}`);
+    }
+  };
+
   const filteredWorkers = workers.filter(worker => {
     const matchesCategory = !selectedCategory || worker.category === selectedCategory;
     const matchesCity = !selectedCity || worker.city === selectedCity;
@@ -40,7 +77,7 @@ const Home: React.FC = () => {
   });
 
   return (
-    <div className="flex flex-col md:flex-row min-h-[calc(100vh-68px)]">
+    <div className="flex flex-col md:flex-row min-h-[calc(100vh-68px)] relative">
       {/* High Density Sidebar */}
       <aside className="w-full md:w-[260px] bg-white border-r border-high-border p-6 hidden md:flex flex-col gap-8 shrink-0">
         <div className="space-y-4">
@@ -60,18 +97,9 @@ const Home: React.FC = () => {
         <div className="space-y-3">
           <h3 className="text-[11px] font-bold uppercase tracking-[0.05em] text-high-muted">Categories</h3>
           <div className="space-y-1.5">
-            <FilterPill 
-               label="All Categories" 
-               active={selectedCategory === ''} 
-               onClick={() => setSelectedCategory('')} 
-            />
+            <FilterPill label="All Categories" active={selectedCategory === ''} onClick={() => setSelectedCategory('')} />
             {CATEGORIES.map(cat => (
-              <FilterPill 
-                key={cat} 
-                label={cat} 
-                active={selectedCategory === cat} 
-                onClick={() => setSelectedCategory(cat)} 
-              />
+              <FilterPill key={cat} label={cat} active={selectedCategory === cat} onClick={() => setSelectedCategory(cat)} />
             ))}
           </div>
         </div>
@@ -79,18 +107,9 @@ const Home: React.FC = () => {
         <div className="space-y-3">
           <h3 className="text-[11px] font-bold uppercase tracking-[0.05em] text-high-muted">Service City</h3>
           <div className="space-y-1.5">
-            <FilterPill 
-               label="All Cities" 
-               active={selectedCity === ''} 
-               onClick={() => setSelectedCity('')} 
-            />
+            <FilterPill label="All Cities" active={selectedCity === ''} onClick={() => setSelectedCity('')} />
             {PAK_CITIES.map(city => (
-              <FilterPill 
-                key={city} 
-                label={city} 
-                active={selectedCity === city} 
-                onClick={() => setSelectedCity(city)} 
-              />
+              <FilterPill key={city} label={city} active={selectedCity === city} onClick={() => setSelectedCity(city)} />
             ))}
           </div>
         </div>
@@ -108,7 +127,6 @@ const Home: React.FC = () => {
               <p className="text-high-muted text-sm mt-1">Showing {filteredWorkers.length} of {workers.length} active workers</p>
             </div>
 
-            {/* Mobile Filter Toggle */}
             <button 
               onClick={() => setShowFilters(!showFilters)}
               className="md:hidden flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold"
@@ -126,19 +144,11 @@ const Home: React.FC = () => {
                 exit={{ opacity: 0, y: -20 }}
                 className="md:hidden bg-white p-4 rounded-xl border border-high-border shadow-lg grid grid-cols-2 gap-4"
               >
-                <select 
-                  className="bg-high-bg border border-high-border rounded-lg p-2 text-sm"
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                >
+                <select className="bg-high-bg border border-high-border rounded-lg p-2 text-sm" value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
                   <option value="">Categories</option>
                   {CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
-                <select 
-                  className="bg-high-bg border border-high-border rounded-lg p-2 text-sm"
-                  value={selectedCity}
-                  onChange={(e) => setSelectedCity(e.target.value)}
-                >
+                <select className="bg-high-bg border border-high-border rounded-lg p-2 text-sm" value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)}>
                   <option value="">Cities</option>
                   {PAK_CITIES.map(city => <option key={city} value={city}>{city}</option>)}
                 </select>
@@ -165,48 +175,54 @@ const Home: React.FC = () => {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   key={worker.uid}
-                  className="bg-white rounded-xl border border-high-border p-4 hover:shadow-lg transition-all relative group"
+                  className="bg-white rounded-xl border border-high-border p-4 hover:shadow-lg transition-all relative group flex flex-col"
                 >
                   <div className="absolute top-4 right-4 h-2.5 w-2.5 rounded-full bg-accent border-2 border-white shadow-sm ring-1 ring-accent/20"></div>
                   
-                  <div className="flex flex-col h-full">
-                    <div className="flex gap-4 mb-4 items-start">
-                      <img
-                        src={worker.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${worker.uid}`}
-                        alt={worker.name}
-                        className="w-14 h-14 rounded-full object-cover shrink-0 bg-slate-100 border border-high-border p-0.5"
-                        referrerPolicy="no-referrer"
-                      />
-                      <div className="flex-grow overflow-hidden">
-                        <span className="inline-block px-2 py-0.5 rounded bg-blue-50 text-blue-800 text-[10px] font-black uppercase mb-1 tracking-wider">
-                          {worker.category}
-                        </span>
-                        <h4 className="text-md font-extrabold text-primary truncate leading-tight">{worker.name}</h4>
-                      </div>
+                  <div className="flex gap-4 mb-4 items-start">
+                    <img
+                      src={worker.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${worker.uid}`}
+                      alt={worker.name}
+                      className="w-14 h-14 rounded-full object-cover shrink-0 bg-slate-100 border border-high-border p-0.5"
+                    />
+                    <div className="flex-grow overflow-hidden">
+                      <span className="inline-block px-2 py-0.5 rounded bg-blue-50 text-blue-800 text-[10px] font-black uppercase mb-1 tracking-wider">
+                        {worker.category}
+                      </span>
+                      <h4 className="text-md font-extrabold text-primary truncate leading-tight">{worker.name}</h4>
                     </div>
+                  </div>
 
-                    <div className="space-y-1.5 text-xs text-high-muted mb-4 flex-grow">
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-3 w-3 text-secondary" />
-                        <span className="truncate">{worker.area}, {worker.city}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Star className="h-3 w-3 text-orange-400 fill-orange-400" />
-                        <span>4.9 (Verified)</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Briefcase className="h-3 w-3 text-secondary" />
-                        <span>{worker.experience} Years Experience</span>
-                      </div>
+                  <div className="space-y-1.5 text-xs text-high-muted mb-4 flex-grow">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-3 w-3 text-secondary" />
+                      <span className="truncate">{worker.area}, {worker.city}</span>
                     </div>
+                    <div className="flex items-center gap-2">
+                      <Star className="h-3 w-3 text-orange-400 fill-orange-400" />
+                      <span>4.9 (Verified)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="h-3 w-3 text-secondary" />
+                      <span>{worker.experience} Years Experience</span>
+                    </div>
+                  </div>
 
+                  <div className="flex flex-col gap-2">
                     <a
                       href={`tel:${worker.phoneNumber}`}
-                      className="w-full bg-secondary text-white rounded-lg py-2.5 text-sm font-bold text-center hover:bg-secondary/90 transition-all flex items-center justify-center gap-2 active:translate-y-px"
+                      className="w-full bg-secondary text-white rounded-lg py-2.5 text-sm font-bold text-center hover:bg-secondary/90 transition-all flex items-center justify-center gap-2"
                     >
                       <Phone className="h-4 w-4" />
-                      Contact Now
+                      Call
                     </a>
+                    <button
+                      onClick={() => handleStartChat(worker)}
+                      className="w-full bg-primary text-white rounded-lg py-2.5 text-sm font-bold text-center hover:bg-primary/90 transition-all flex items-center justify-center gap-2"
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      Chat
+                    </button>
                   </div>
                 </motion.div>
               ))}
@@ -222,6 +238,34 @@ const Home: React.FC = () => {
           )}
         </div>
       </main>
+
+      {/* Floating Chat Icon */}
+      {user && (
+        <div className="fixed bottom-8 right-8 z-50">
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => navigate('/chats')}
+            className="relative p-5 bg-primary text-white rounded-full shadow-2xl border-2 border-white flex items-center justify-center group"
+          >
+            <MessageSquare className="h-6 w-6" />
+            <AnimatePresence>
+              {chatCount > 0 && (
+                <motion.span 
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute -top-1 -right-1 bg-secondary text-white text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-sm"
+                >
+                  {chatCount}
+                </motion.span>
+              )}
+            </AnimatePresence>
+            <span className="absolute right-full mr-4 px-3 py-1 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+              My Chats
+            </span>
+          </motion.button>
+        </div>
+      )}
     </div>
   );
 };
