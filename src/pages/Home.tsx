@@ -8,6 +8,17 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 
+import { 
+  Search, 
+  MapPin, 
+  Briefcase, 
+  Star, 
+  Phone, 
+  Filter, 
+  X, 
+  MessageSquare // <--- Add this!
+} from 'lucide-react';
+
 const Home: React.FC = () => {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
