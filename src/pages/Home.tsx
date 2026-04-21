@@ -81,6 +81,45 @@ const Home: React.FC = () => {
     }
   };
 
+  const seedTestData = async () => {
+  try {
+    // 1. Create a Worker Account
+    const workerEmail = "worker_test@example.com";
+    const workerPass = "password123";
+    
+    // Note: If the user already exists, this might throw an error, 
+    // which is fine, we just want the Firestore docs to exist.
+    const workerCred = await createUserWithEmailAndPassword(auth, workerEmail, workerPass);
+    const workerUid = workerCred.user.uid;
+
+    // 2. Create the Worker Profile in Firestore
+    await setDoc(doc(db, 'workers', workerUid), {
+      uid: workerUid,
+      name: "John the Electrician",
+      category: "Electrician",
+      city: "Karachi",
+      area: "Gulshan",
+      experience: "5",
+      phoneNumber: "03001234567",
+      isApproved: true, // So they show up on Home
+      createdAt: serverTimestamp(),
+      bio: "Professional electrician with 5 years experience."
+    });
+
+    // 3. Create a User Profile for the Worker (so the role logic works)
+    await setDoc(doc(db, 'users', workerUid), {
+      uid: workerUid,
+      email: workerEmail,
+      role: 'worker'
+    });
+
+    alert("Worker test data created! Now log out and create a regular client account to chat with them.");
+  } catch (err: any) {
+    console.error(err);
+    alert("Error seeding data: " + err.message);
+  }
+};
+
   const filteredWorkers = workers.filter(worker => {
     const matchesCategory = !selectedCategory || worker.category === selectedCategory;
     const matchesCity = !selectedCity || worker.city === selectedCity;
@@ -91,6 +130,15 @@ const Home: React.FC = () => {
   });
 
   return (
+
+    <div className="flex flex-col md:flex-row ...">
+    {/* TEMP BUTTON: Remove after testing */}
+    <button 
+      onClick={seedTestData}
+      className="fixed top-20 left-4 z-[100] bg-red-600 text-white p-2 rounded shadow-xl text-xs"
+    >
+      🔨 SEED WORKER DATA
+    </button> 
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-68px)] relative">
       <aside className="w-full md:w-[260px] bg-white border-r border-high-border p-6 hidden md:flex flex-col gap-8 shrink-0">
         <div className="space-y-4">
@@ -106,6 +154,7 @@ const Home: React.FC = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+        
 
         <div className="space-y-3">
           <h3 className="text-[11px] font-bold uppercase tracking-[0.05em] text-high-muted">Categories</h3>
