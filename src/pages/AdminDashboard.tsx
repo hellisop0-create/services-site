@@ -15,27 +15,41 @@ const AdminDashboard: React.FC = () => {
   const [globalBanner, setGlobalBanner] = useState('');
 
   useEffect(() => {
-    const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
-      setUsers(snapshot.docs.map(doc => doc.data() as UserProfile));
-    });
+  setLoading(true);
 
-    const unsubWorkers = onSnapshot(collection(db, 'workers'), (snapshot) => {
-      setWorkers(snapshot.docs.map(doc => doc.data() as WorkerProfile));
-    });
+  // 1. Listen to Users
+  const unsubUsers = onSnapshot(collection(db, 'users'), 
+    (snapshot) => {
+      setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile)));
+    },
+    (err) => console.error("User list access denied. Are you an admin?", err)
+  );
 
-    const unsubSettings = onSnapshot(doc(db, 'settings', 'general'), (docSnap) => {
-      if (docSnap.exists()) {
-        setGlobalBanner(docSnap.data().banner || '');
-      }
-      setLoading(false);
-    });
+  // 2. Listen to Workers
+  const unsubWorkers = onSnapshot(collection(db, 'workers'), 
+    (snapshot) => {
+      setWorkers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as WorkerProfile)));
+    },
+    (err) => console.error("Worker list access denied.", err)
+  );
 
-    return () => {
-      unsubUsers();
-      unsubWorkers();
-      unsubSettings();
-    };
-  }, []);
+  // 3. Listen to Settings
+  const unsubSettings = onSnapshot(doc(db, 'settings', 'general'), (docSnap) => {
+    if (docSnap.exists()) {
+      setGlobalBanner(docSnap.data().banner || '');
+    }
+    setLoading(false); // Global stop loading
+  }, (error) => {
+    console.error("Settings listener failed:", error);
+    setLoading(false); 
+  });
+
+  return () => {
+    unsubUsers();
+    unsubWorkers();
+    unsubSettings();
+  };
+}, []);
 
   const handleUpdateRole = async (uid: string, newRole: any) => {
     await updateDoc(doc(db, 'users', uid), { role: newRole });
