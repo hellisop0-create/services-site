@@ -46,39 +46,59 @@ const Home: React.FC = () => {
   }, [user, profile]);
 
   const handleStartChat = async (e: React.MouseEvent, worker: WorkerProfile) => {
-    e.preventDefault();
-    e.stopPropagation();
+  e.preventDefault();
+  e.stopPropagation();
 
-    if (!user) return alert("Please login first");
+  console.log("--- Chat Debug Start ---");
+  console.log("Worker UID:", worker.uid);
+  console.log("Current User UID:", user?.uid);
 
-    try {
-      const chatsRef = collection(db, 'chats');
-      const q = query(
-        chatsRef,
-        where('clientId', '==', user.uid),
-        where('workerId', '==', worker.uid)
-      );
+  if (!user) {
+    alert("Please login first");
+    return;
+  }
 
-      const snapshot = await getDocs(q);
+  if (user.uid === worker.uid) {
+    alert("You cannot chat with yourself.");
+    return;
+  }
 
-      if (!snapshot.empty) {
-        navigate(`/chat/${snapshot.docs[0].id}`);
-      } else {
-        const newDoc = await addDoc(chatsRef, {
-          clientId: user.uid,
-          clientEmail: user.email,
-          workerId: worker.uid,
-          workerName: worker.name,
-          createdAt: serverTimestamp(),
-          lastMessage: 'Chat started',
-        });
-        navigate(`/chat/${newDoc.id}`);
-      }
-    } catch (err: any) {
-      console.error("Firestore Error:", err.code, err.message);
-      alert("Chat could not be started. Check console for details.");
+  try {
+    const chatsRef = collection(db, 'chats');
+    
+    // We search for a chat where YOU are the client and THEY are the worker
+    console.log("Searching for existing chat...");
+    const q = query(
+      chatsRef,
+      where('clientId', '==', user.uid),
+      where('workerId', '==', worker.uid)
+    );
+
+    const snapshot = await getDocs(q);
+    console.log("Query complete. Found existing docs:", snapshot.size);
+
+    if (!snapshot.empty) {
+      const chatId = snapshot.docs[0].id;
+      console.log("Navigating to existing chat:", chatId);
+      navigate(`/chat/${chatId}`);
+    } else {
+      console.log("No existing chat found. Creating new one...");
+      const newDoc = await addDoc(chatsRef, {
+        clientId: user.uid,
+        clientEmail: user.email,
+        workerId: worker.uid,
+        workerName: worker.name,
+        createdAt: serverTimestamp(),
+        lastMessage: 'Chat started',
+      });
+      console.log("New chat created with ID:", newDoc.id);
+      navigate(`/chat/${newDoc.id}`);
     }
-  };
+  } catch (err: any) {
+    console.error("FAILED AT STEP:", err);
+    alert("System Error: " + err.message);
+  }
+};
 
   const seedTestData = async () => {
     try {
