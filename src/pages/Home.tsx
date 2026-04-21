@@ -19,6 +19,8 @@ import {
   MessageSquare // <--- Add this!
 } from 'lucide-react';
 
+const navigate = useNavigate(); // Make sure this line exists inside the Home component
+
 const Home: React.FC = () => {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
@@ -348,7 +350,7 @@ const Home: React.FC = () => {
 
 const FilterPill = ({ label, active, onClick }: any) => (
   <button
-    onClick={onClick}
+    onClick={() => navigate(`/chat/${someChatId}`)}
     className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all border ${active
         ? 'bg-secondary text-white border-secondary shadow-sm shadow-blue-100'
         : 'bg-high-bg text-high-text border-high-border hover:border-secondary/30'

@@ -59,6 +59,7 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/chats" element={<PrivateRoute><ChatList /></PrivateRoute>} />
             
             {/* Updated Chat Route with Wrapper */}
             <Route path="/chat/:id" element={
