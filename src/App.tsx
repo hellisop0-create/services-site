@@ -75,6 +75,12 @@ export default function App() {
               </PrivateRoute>
             } />
 
+            <Route path="/chats" element={
+  <PrivateRoute>
+    <ChatListPage /> {/* You will need to create this component */}
+  </PrivateRoute>
+} />
+
             {/* Worker Profile Edit */}
             <Route path="/profile/edit" element={
               <PrivateRoute workerOnly>

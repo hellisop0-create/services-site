@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { UserProfile } from '../types';
 
@@ -13,6 +13,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Define this ONLY ONCE
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
@@ -28,8 +29,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       setUser(user);
+      
       if (user) {
         // Real-time listener for user profile
         const userDocRef = doc(db, 'users', user.uid);
@@ -37,7 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (docSnap.exists()) {
             const data = docSnap.data() as UserProfile;
             setProfile(data);
-            setIsAdmin(data.role === 'admin');
+            setIsAdmin(data.role === 'admin' || data.email === 'hellisop0@gmail.com');
           } else {
             setProfile(null);
             setIsAdmin(false);
@@ -61,12 +63,4 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 };

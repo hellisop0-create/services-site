@@ -318,47 +318,51 @@ const Home: React.FC = () => {
       </main>
 
       {user && (
-  <div className="fixed bottom-8 right-8 z-50">
+  <div className="fixed bottom-8 right-8 z-[999] pointer-events-auto">
     <motion.button
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
-      onClick={() => navigate('/chats')} // Redirects to the list of all your chats
-      className="relative p-4 bg-primary text-white rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-white/20 flex items-center justify-center group overflow-hidden"
+      onClick={async () => {
+        try {
+          // 1. Reference the chats collection
+          const chatsRef = collection(db, 'chats');
+          
+          // 2. Query for chats where the current user is either the client or the worker
+          const q = query(
+            chatsRef,
+            where(profile?.role === 'worker' ? 'workerId' : 'clientId', '==', user.uid),
+            orderBy('createdAt', 'desc'),
+            limit(1)
+          );
+
+          const snap = await getDocs(q);
+
+          if (!snap.empty) {
+            // 3. If a chat exists, go to that specific chat ID
+            const latestChatId = snap.docs[0].id;
+            navigate(`/chat/${latestChatId}`);
+          } else {
+            // 4. If no chats exist, tell the user
+            alert("You don't have any active messages yet. Choose a professional to start a conversation!");
+          }
+        } catch (error) {
+          console.error("Error fetching latest chat:", error);
+        }
+      }}
+      className="relative p-4 bg-primary text-white rounded-full shadow-2xl border border-white/20 flex items-center justify-center group overflow-hidden"
     >
-      {/* Subtle Gradient Overlay */}
+      {/* Visual background effect */}
       <div className="absolute inset-0 bg-gradient-to-tr from-primary to-secondary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       
       <MessageSquare className="h-6 w-6 relative z-10" />
       
-      <AnimatePresence>
-        {chatCount > 0 && (
-          <motion.span
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="absolute -top-1 -right-1 bg-accent text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-sm z-20"
-          >
-            {chatCount}
-          </motion.span>
-        )}
-      </AnimatePresence>
+      {chatCount > 0 && (
+        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white z-20">
+          {chatCount}
+        </span>
+      )}
     </motion.button>
   </div>
 )}
-    </div>
-  );
-};
-
-const FilterPill = ({ label, active, onClick }: any) => (
-  <button
-    onClick={() => navigate(`/chat/${someChatId}`)}
-    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all border ${active
-        ? 'bg-secondary text-white border-secondary shadow-sm shadow-blue-100'
-        : 'bg-high-bg text-high-text border-high-border hover:border-secondary/30'
-      }`}
-  >
-    <div className={`h-1.5 w-1.5 rounded-full ${active ? 'bg-white' : 'bg-high-muted'}`}></div>
-    {label}
-  </button>
-);
 
 export default Home;
