@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../firebase/config';
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { Send, ShieldAlert } from 'lucide-react';
+import { Send, ShieldAlert, MessageSquare } from 'lucide-react'; // <--- Add it here too!
 
 interface Message {
   id: string;
