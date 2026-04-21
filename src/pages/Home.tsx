@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, orderBy, addDoc, getDocs, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { collection, query, where, onSnapshot, orderBy, addDoc, getDocs, serverTimestamp, setDoc, doc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { db, auth } from '../firebase/config';
 import { WorkerProfile, CATEGORIES, PAK_CITIES } from '../types';
 import { Search, MapPin, Briefcase, Star, Phone, Filter, X, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -45,7 +46,6 @@ const Home: React.FC = () => {
   }, [user, profile]);
 
   const handleStartChat = async (e: React.MouseEvent, worker: WorkerProfile) => {
-    // CRITICAL: Prevent the default button behavior (refresh)
     e.preventDefault();
     e.stopPropagation();
 
@@ -76,49 +76,43 @@ const Home: React.FC = () => {
       }
     } catch (err: any) {
       console.error("Firestore Error:", err.code, err.message);
-      // If you see an "Index" error in console, click the link provided there.
       alert("Chat could not be started. Check console for details.");
     }
   };
 
   const seedTestData = async () => {
-  try {
-    // 1. Create a Worker Account
-    const workerEmail = "worker_test@example.com";
-    const workerPass = "password123";
-    
-    // Note: If the user already exists, this might throw an error, 
-    // which is fine, we just want the Firestore docs to exist.
-    const workerCred = await createUserWithEmailAndPassword(auth, workerEmail, workerPass);
-    const workerUid = workerCred.user.uid;
+    try {
+      const workerEmail = "worker_test@example.com";
+      const workerPass = "password123";
+      
+      const workerCred = await createUserWithEmailAndPassword(auth, workerEmail, workerPass);
+      const workerUid = workerCred.user.uid;
 
-    // 2. Create the Worker Profile in Firestore
-    await setDoc(doc(db, 'workers', workerUid), {
-      uid: workerUid,
-      name: "John the Electrician",
-      category: "Electrician",
-      city: "Karachi",
-      area: "Gulshan",
-      experience: "5",
-      phoneNumber: "03001234567",
-      isApproved: true, // So they show up on Home
-      createdAt: serverTimestamp(),
-      bio: "Professional electrician with 5 years experience."
-    });
+      await setDoc(doc(db, 'workers', workerUid), {
+        uid: workerUid,
+        name: "John the Electrician",
+        category: "Electrician",
+        city: "Karachi",
+        area: "Gulshan",
+        experience: "5",
+        phoneNumber: "03001234567",
+        isApproved: true,
+        createdAt: serverTimestamp(),
+        bio: "Professional electrician with 5 years experience."
+      });
 
-    // 3. Create a User Profile for the Worker (so the role logic works)
-    await setDoc(doc(db, 'users', workerUid), {
-      uid: workerUid,
-      email: workerEmail,
-      role: 'worker'
-    });
+      await setDoc(doc(db, 'users', workerUid), {
+        uid: workerUid,
+        email: workerEmail,
+        role: 'worker'
+      });
 
-    alert("Worker test data created! Now log out and create a regular client account to chat with them.");
-  } catch (err: any) {
-    console.error(err);
-    alert("Error seeding data: " + err.message);
-  }
-};
+      alert("Worker test data created! Now log out and create a regular client account to chat with them.");
+    } catch (err: any) {
+      console.error(err);
+      alert("Error seeding data: " + err.message);
+    }
+  };
 
   const filteredWorkers = workers.filter(worker => {
     const matchesCategory = !selectedCategory || worker.category === selectedCategory;
@@ -130,16 +124,14 @@ const Home: React.FC = () => {
   });
 
   return (
-
-    <div className="flex flex-col md:flex-row ...">
-    {/* TEMP BUTTON: Remove after testing */}
-    <button 
-      onClick={seedTestData}
-      className="fixed top-20 left-4 z-[100] bg-red-600 text-white p-2 rounded shadow-xl text-xs"
-    >
-      🔨 SEED WORKER DATA
-    </button> 
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-68px)] relative">
+      <button 
+        onClick={seedTestData}
+        className="fixed top-24 left-4 z-[100] bg-red-600 text-white p-2 rounded shadow-xl text-xs font-bold"
+      >
+        🔨 SEED WORKER DATA
+      </button>
+
       <aside className="w-full md:w-[260px] bg-white border-r border-high-border p-6 hidden md:flex flex-col gap-8 shrink-0">
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-2">
@@ -154,7 +146,6 @@ const Home: React.FC = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        
 
         <div className="space-y-3">
           <h3 className="text-[11px] font-bold uppercase tracking-[0.05em] text-high-muted">Categories</h3>
@@ -278,7 +269,7 @@ const Home: React.FC = () => {
                       Call
                     </a>
                     <button
-                      type="button" // CRITICAL: Prevents accidental form submission/refresh
+                      type="button"
                       onClick={(e) => handleStartChat(e, worker)}
                       className="w-full bg-primary text-white rounded-lg py-2.5 text-sm font-bold text-center hover:bg-primary/90 transition-all flex items-center justify-center gap-2"
                     >
@@ -293,7 +284,6 @@ const Home: React.FC = () => {
         </div>
       </main>
 
-      {/* Floating Chat Icon */}
       {user && (
         <div className="fixed bottom-8 right-8 z-50">
           <motion.button
@@ -314,9 +304,6 @@ const Home: React.FC = () => {
                 </motion.span>
               )}
             </AnimatePresence>
-            <span className="absolute right-full mr-4 px-3 py-1 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-              My Chats
-            </span>
           </motion.button>
         </div>
       )}
