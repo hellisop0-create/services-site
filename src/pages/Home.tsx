@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, onSnapshot, orderBy, addDoc, getDocs, serverTimestamp } from 'firebase/firestore';
-import { db, auth } from '../firebase/config';
+import { db } from '../firebase/config';
 import { WorkerProfile, CATEGORIES, PAK_CITIES } from '../types';
 import { Search, MapPin, Briefcase, Star, Phone, Filter, X, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -34,7 +34,6 @@ const Home: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // Monitor total active chats for the floating icon badge
   useEffect(() => {
     if (!user) return;
     const q = query(
@@ -45,55 +44,40 @@ const Home: React.FC = () => {
     return () => unsub();
   }, [user, profile]);
 
-  const handleStartChat = async (worker: WorkerProfile) => {
-  if (!user) return alert("Please login first");
+  const handleStartChat = async (e: React.MouseEvent, worker: WorkerProfile) => {
+    // CRITICAL: Prevent the default button behavior (refresh)
+    e.preventDefault();
+    e.stopPropagation();
 
-  try {
-    const chatsRef = collection(db, 'chats');
-    // This query is what was triggering the 'permission-denied'
-    const q = query(
-      chatsRef, 
-      where('clientId', '==', user.uid), 
-      where('workerId', '==', worker.uid)
-    );
-    
-    const snapshot = await getDocs(q);
+    if (!user) return alert("Please login first");
 
-    if (!snapshot.empty) {
-      navigate(`/chat/${snapshot.docs[0].id}`);
-    } else {
-      const newDoc = await addDoc(chatsRef, {
-        clientId: user.uid,
-        clientEmail: user.email,
-        workerId: worker.uid,
-        workerName: worker.name,
-        createdAt: serverTimestamp(),
-        lastMessage: 'Chat started'
-      });
-      navigate(`/chat/${newDoc.id}`);
-    }
-  } catch (err: any) {
-    console.error("Firestore Error:", err.code, err.message);
-    alert("Chat could not be started. Check console for index link.");
-  }
-};
+    try {
+      const chatsRef = collection(db, 'chats');
+      const q = query(
+        chatsRef,
+        where('clientId', '==', user.uid),
+        where('workerId', '==', worker.uid)
+      );
 
-    const chatsRef = collection(db, 'chats');
-    const q = query(chatsRef, where('clientId', '==', user.uid), where('workerId', '==', worker.uid));
-    const existing = await getDocs(q);
+      const snapshot = await getDocs(q);
 
-    if (!existing.empty) {
-      navigate(`/chat/${existing.docs[0].id}`);
-    } else {
-      const newChat = await addDoc(chatsRef, {
-        clientId: user.uid,
-        clientEmail: user.email,
-        workerId: worker.uid,
-        workerName: worker.name,
-        createdAt: serverTimestamp(),
-        lastMessage: 'New inquiry started',
-      });
-      navigate(`/chat/${newChat.id}`);
+      if (!snapshot.empty) {
+        navigate(`/chat/${snapshot.docs[0].id}`);
+      } else {
+        const newDoc = await addDoc(chatsRef, {
+          clientId: user.uid,
+          clientEmail: user.email,
+          workerId: worker.uid,
+          workerName: worker.name,
+          createdAt: serverTimestamp(),
+          lastMessage: 'Chat started',
+        });
+        navigate(`/chat/${newDoc.id}`);
+      }
+    } catch (err: any) {
+      console.error("Firestore Error:", err.code, err.message);
+      // If you see an "Index" error in console, click the link provided there.
+      alert("Chat could not be started. Check console for details.");
     }
   };
 
@@ -108,7 +92,6 @@ const Home: React.FC = () => {
 
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-68px)] relative">
-      {/* High Density Sidebar */}
       <aside className="w-full md:w-[260px] bg-white border-r border-high-border p-6 hidden md:flex flex-col gap-8 shrink-0">
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-2">
@@ -145,7 +128,6 @@ const Home: React.FC = () => {
         </div>
       </aside>
 
-      {/* Main Content Area */}
       <main className="flex-grow p-6 overflow-y-auto">
         <div className="max-w-6xl mx-auto space-y-6">
           <div className="flex justify-between items-end border-b border-high-border pb-4">
@@ -247,7 +229,8 @@ const Home: React.FC = () => {
                       Call
                     </a>
                     <button
-                      onClick={() => handleStartChat(worker)}
+                      type="button" // CRITICAL: Prevents accidental form submission/refresh
+                      onClick={(e) => handleStartChat(e, worker)}
                       className="w-full bg-primary text-white rounded-lg py-2.5 text-sm font-bold text-center hover:bg-primary/90 transition-all flex items-center justify-center gap-2"
                     >
                       <MessageSquare className="h-4 w-4" />
@@ -256,14 +239,6 @@ const Home: React.FC = () => {
                   </div>
                 </motion.div>
               ))}
-            </div>
-          )}
-
-          {!loading && filteredWorkers.length === 0 && (
-            <div className="text-center py-16 bg-white rounded-2xl border border-high-border">
-              <X className="h-10 w-10 text-high-muted mx-auto mb-2 opacity-20" />
-              <h3 className="text-lg font-bold text-primary">No Matching Workers</h3>
-              <p className="text-high-muted text-sm">Adjust filters to find more professionals.</p>
             </div>
           )}
         </div>
