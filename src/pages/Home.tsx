@@ -46,8 +46,38 @@ const Home: React.FC = () => {
   }, [user, profile]);
 
   const handleStartChat = async (worker: WorkerProfile) => {
-    if (!user) return alert("Please login to message workers");
+  if (!user) return alert("Please login first");
+
+  try {
+    const chatsRef = collection(db, 'chats');
+    // This query is what was triggering the 'permission-denied'
+    const q = query(
+      chatsRef, 
+      where('clientId', '==', user.uid), 
+      where('workerId', '==', worker.uid)
+    );
     
+    const snapshot = await getDocs(q);
+
+    if (!snapshot.empty) {
+      navigate(`/chat/${snapshot.docs[0].id}`);
+    } else {
+      const newDoc = await addDoc(chatsRef, {
+        clientId: user.uid,
+        clientEmail: user.email,
+        workerId: worker.uid,
+        workerName: worker.name,
+        createdAt: serverTimestamp(),
+        lastMessage: 'Chat started'
+      });
+      navigate(`/chat/${newDoc.id}`);
+    }
+  } catch (err: any) {
+    console.error("Firestore Error:", err.code, err.message);
+    alert("Chat could not be started. Check console for index link.");
+  }
+};
+
     const chatsRef = collection(db, 'chats');
     const q = query(chatsRef, where('clientId', '==', user.uid), where('workerId', '==', worker.uid));
     const existing = await getDocs(q);
@@ -70,7 +100,7 @@ const Home: React.FC = () => {
   const filteredWorkers = workers.filter(worker => {
     const matchesCategory = !selectedCategory || worker.category === selectedCategory;
     const matchesCity = !selectedCity || worker.city === selectedCity;
-    const matchesSearch = !searchTerm || 
+    const matchesSearch = !searchTerm ||
       worker.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       worker.bio.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesCity && matchesSearch;
@@ -121,13 +151,13 @@ const Home: React.FC = () => {
           <div className="flex justify-between items-end border-b border-high-border pb-4">
             <div>
               <h2 className="text-2xl font-black text-primary tracking-tight">
-                {selectedCategory || 'All Professionals'} 
+                {selectedCategory || 'All Professionals'}
                 <span className="text-secondary ml-2">in {selectedCity || 'Pakistan'}</span>
               </h2>
               <p className="text-high-muted text-sm mt-1">Showing {filteredWorkers.length} of {workers.length} active workers</p>
             </div>
 
-            <button 
+            <button
               onClick={() => setShowFilters(!showFilters)}
               className="md:hidden flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold"
             >
@@ -138,7 +168,7 @@ const Home: React.FC = () => {
 
           <AnimatePresence>
             {showFilters && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
@@ -178,7 +208,7 @@ const Home: React.FC = () => {
                   className="bg-white rounded-xl border border-high-border p-4 hover:shadow-lg transition-all relative group flex flex-col"
                 >
                   <div className="absolute top-4 right-4 h-2.5 w-2.5 rounded-full bg-accent border-2 border-white shadow-sm ring-1 ring-accent/20"></div>
-                  
+
                   <div className="flex gap-4 mb-4 items-start">
                     <img
                       src={worker.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${worker.uid}`}
@@ -251,7 +281,7 @@ const Home: React.FC = () => {
             <MessageSquare className="h-6 w-6" />
             <AnimatePresence>
               {chatCount > 0 && (
-                <motion.span 
+                <motion.span
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   className="absolute -top-1 -right-1 bg-secondary text-white text-[10px] font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-sm"
@@ -273,11 +303,10 @@ const Home: React.FC = () => {
 const FilterPill = ({ label, active, onClick }: any) => (
   <button
     onClick={onClick}
-    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all border ${
-      active 
-        ? 'bg-secondary text-white border-secondary shadow-sm shadow-blue-100' 
+    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all border ${active
+        ? 'bg-secondary text-white border-secondary shadow-sm shadow-blue-100'
         : 'bg-high-bg text-high-text border-high-border hover:border-secondary/30'
-    }`}
+      }`}
   >
     <div className={`h-1.5 w-1.5 rounded-full ${active ? 'bg-white' : 'bg-high-muted'}`}></div>
     {label}
