@@ -16,33 +16,41 @@ const Signup: React.FC = () => {
   const navigate = useNavigate();
 
   const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+  e.preventDefault();
+  setLoading(true);
+  setError('');
 
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
 
-      // Create user document in Firestore
-      await setDoc(doc(db, 'users', user.uid), {
+    // 1. Create user document in 'users' collection
+    await setDoc(doc(db, 'users', user.uid), {
+      uid: user.uid,
+      email: email,
+      role: role,
+      createdAt: serverTimestamp(),
+    });
+
+    // 2. NEW: If they are a worker, initialize their worker profile too
+    if (role === 'worker') {
+      await setDoc(doc(db, 'workers', user.uid), {
         uid: user.uid,
-        email: email,
-        role: role,
+        name: '', // Will be filled in /profile/edit
+        isApproved: false, // Must be false until admin approves
         createdAt: serverTimestamp(),
       });
-
-      if (role === 'worker') {
-        navigate('/profile/edit'); // Workers go to profile setup
-      } else {
-        navigate('/'); // Clients go home
-      }
-    } catch (err: any) {
-      setError(err.message || 'Failed to create account');
-    } finally {
-      setLoading(false);
+      navigate('/profile/edit');
+    } else {
+      navigate('/');
     }
-  };
+  } catch (err: any) {
+    console.error("Signup Error Details:", err); // ALWAYS log the full error for debugging
+    setError(err.message || 'Failed to create account');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleGoogleSignup = async () => {
     setLoading(true);
