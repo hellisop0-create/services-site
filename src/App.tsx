@@ -1,11 +1,11 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import ChatPage from './pages/ChatPage';
+import ChatBox from './pages/ChatBox';
 import WorkerProfileForm from './pages/WorkerProfileForm';
 import AdminDashboard from './pages/AdminDashboard';
 import UserProfilePage from './pages/UserProfilePage';
@@ -26,6 +26,30 @@ const PrivateRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean; w
   return <>{children}</>;
 };
 
+/**
+ * Wrapper to extract URL params and Auth state 
+ * and pass them as props to the ChatBox component
+ */
+const ChatRouteWrapper = () => {
+  const { id } = useParams();
+  const { user, profile } = useAuth();
+
+  if (!user || !profile) {
+    return <div className="h-screen flex items-center justify-center">Loading Chat...</div>;
+  }
+
+  return (
+    <ChatBox 
+      chatId={id || ''} 
+      currentUser={{
+        uid: user.uid,
+        email: user.email || '',
+        role: profile.role
+      }} 
+    />
+  );
+};
+
 export default function App() {
   return (
     <AuthProvider>
@@ -35,7 +59,13 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/chat/:id" element={<ChatWindow />} />
+            
+            {/* Updated Chat Route with Wrapper */}
+            <Route path="/chat/:id" element={
+              <PrivateRoute>
+                <ChatRouteWrapper />
+              </PrivateRoute>
+            } />
             
             {/* User Profile */}
             <Route path="/profile" element={
