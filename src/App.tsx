@@ -9,6 +9,8 @@ import ChatBox from './pages/ChatBox';
 import WorkerProfileForm from './pages/WorkerProfileForm';
 import AdminDashboard from './pages/AdminDashboard';
 import UserProfilePage from './pages/UserProfilePage';
+// Note: Assuming ChatListPage is the correct component for the chats route
+import ChatListPage from './pages/ChatListPage'; 
 
 // Helper component for protected routes
 const PrivateRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean; workerOnly?: boolean }> = ({ 
@@ -59,7 +61,13 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/chats" element={<PrivateRoute><ChatList /></PrivateRoute>} />
+            
+            {/* Unified Chat List Route */}
+            <Route path="/chats" element={
+              <PrivateRoute>
+                <ChatListPage />
+              </PrivateRoute>
+            } />
             
             {/* Updated Chat Route with Wrapper */}
             <Route path="/chat/:id" element={
@@ -74,12 +82,6 @@ export default function App() {
                 <UserProfilePage />
               </PrivateRoute>
             } />
-
-            <Route path="/chats" element={
-  <PrivateRoute>
-    <ChatListPage /> {/* You will need to create this component */}
-  </PrivateRoute>
-} />
 
             {/* Worker Profile Edit */}
             <Route path="/profile/edit" element={
