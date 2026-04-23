@@ -11,33 +11,33 @@ const MessagesPage = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Inside MessagesPage.tsx
+  // --- REPLACE YOUR OLD USEEFFECT WITH THIS ONE ---
   useEffect(() => {
-    if (!user || !profile) return;
+    if (!user) return;
 
     const chatsRef = collection(db, 'chats');
 
-    // Use 'createdAt' if you haven't implemented 'updatedAt' in your chat logic yet
-    const q = query(
-      chatsRef,
-      where(profile.role === 'worker' ? 'workerId' : 'clientId', '==', user.uid),
-      orderBy('createdAt', 'desc')
-    );
+    // This version is "loose" to find your messages even if roles/sorting are broken
+    const unsub = onSnapshot(chatsRef, (snap) => {
+      const allChats = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Filter manually to ensure we see the data
+      const myChats = allChats.filter((chat: any) => 
+        chat.clientId === user.uid || chat.workerId === user.uid
+      );
 
-    const unsub = onSnapshot(q,
-      (snap) => {
-        const chatList = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setChats(chatList);
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Firestore Error:", error);
-        setLoading(false); // Stop loading even if there's an error
-      }
-    );
+      console.log("Database Sync - Total Chats:", allChats.length);
+      console.log("Matching your ID:", myChats.length);
+
+      setChats(myChats);
+      setLoading(false);
+    }, (err) => {
+      console.error("Firestore Sync Error:", err);
+      setLoading(false);
+    });
 
     return () => unsub();
-  }, [user, profile]);
+  }, [user]);
 
   if (loading) return <div className="p-10 text-center">Loading inbox...</div>;
 
