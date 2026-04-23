@@ -127,42 +127,8 @@ const Home: React.FC = () => {
       console.error("FAILED AT STEP:", err);
       alert("System Error: " + err.message);
     }
-  };
-
-  const seedTestData = async () => {
-    try {
-      const workerEmail = `worker_${Date.now()}@example.com`;
-      const workerPass = "password123";
-
-      const workerCred = await createUserWithEmailAndPassword(auth, workerEmail, workerPass);
-      const workerUid = workerCred.user.uid;
-
-      await setDoc(doc(db, 'workers', workerUid), {
-        uid: workerUid,
-        name: "John the Electrician",
-        category: "Electrician",
-        city: "Karachi",
-        area: "Gulshan",
-        experience: "5",
-        phoneNumber: "03001234567",
-        isApproved: true,
-        createdAt: serverTimestamp(),
-        bio: "Professional electrician with 5 years experience."
-      });
-
-      await setDoc(doc(db, 'users', workerUid), {
-        uid: workerUid,
-        email: workerEmail,
-        role: 'worker'
-      });
-
-      alert("Worker test data created!");
-    } catch (err: any) {
-      console.error(err);
-      alert("Error seeding data: " + err.message);
-    }
-  };
-
+  }
+  
   const filteredWorkers = workers.filter(worker => {
     const matchesCategory = !selectedCategory || worker.category === selectedCategory;
     const matchesCity = !selectedCity || worker.city === selectedCity;
@@ -174,12 +140,6 @@ const Home: React.FC = () => {
 
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-68px)] relative">
-      <button
-        onClick={seedTestData}
-        className="fixed top-24 left-4 z-[100] bg-red-600 text-white p-2 rounded shadow-xl text-xs font-bold"
-      >
-        🔨 SEED WORKER DATA
-      </button>
 
       {/* Sidebar - Desktop */}
       <aside className="w-full md:w-[260px] bg-white border-r border-high-border p-6 hidden md:flex flex-col gap-8 shrink-0">
