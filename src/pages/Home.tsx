@@ -37,8 +37,8 @@ const FilterPill = ({ label, active, onClick }: { label: string; active: boolean
   <button
     onClick={onClick}
     className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${active
-        ? 'bg-secondary text-white font-bold shadow-sm'
-        : 'text-high-muted hover:bg-high-bg hover:text-primary'
+      ? 'bg-secondary text-white font-bold shadow-sm'
+      : 'text-high-muted hover:bg-high-bg hover:text-primary'
       }`}
   >
     {label}
@@ -128,7 +128,7 @@ const Home: React.FC = () => {
       alert("System Error: " + err.message);
     }
   }
-  
+
   const filteredWorkers = workers.filter(worker => {
     const matchesCategory = !selectedCategory || worker.category === selectedCategory;
     const matchesCity = !selectedCity || worker.city === selectedCity;
@@ -293,18 +293,21 @@ const Home: React.FC = () => {
       </main>
 
       {/* Floating Chat Button */}
-      {/* Updated Floating Chat Button in Home.tsx */}
       {user && (
-        <div className="fixed bottom-8 right-8 z-[999] pointer-events-auto">
+        <div className="fixed bottom-8 right-8 z-[999]">
           <motion.button
+            type="button"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => navigate('/messages')} // ✅ Professional approach: Go to the Inbox
-            className="relative p-4 bg-primary text-white rounded-full shadow-2xl border border-white/20 flex items-center justify-center group overflow-hidden"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate('/messages');
+            }}
+            className="relative p-4 bg-primary text-white rounded-full shadow-2xl border border-white/20 flex items-center justify-center group overflow-hidden cursor-pointer"
           >
             <div className="absolute inset-0 bg-gradient-to-tr from-primary to-secondary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             <MessageSquare className="h-6 w-6 relative z-10" />
-
+            
             {chatCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white z-20">
                 {chatCount}
@@ -313,8 +316,9 @@ const Home: React.FC = () => {
           </motion.button>
         </div>
       )}
-    </div>
-  );
-};
+    </div> // This closes the main div
+  ); // This closes return
+}; // This closes const Home
 
-export default Home;
+
+      export default Home;

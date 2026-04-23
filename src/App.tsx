@@ -9,10 +9,11 @@ import ChatBox from './pages/ChatBox';
 import WorkerProfileForm from './pages/WorkerProfileForm';
 import AdminDashboard from './pages/AdminDashboard';
 import UserProfilePage from './pages/UserProfilePage';
+import MessagesPage from './pages/MessagesPage'; // ✅ ADD THIS IMPORT
 
 // Helper component for protected routes
-const PrivateRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean; workerOnly?: boolean }> = ({ 
-  children, 
+const PrivateRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean; workerOnly?: boolean }> = ({
+  children,
   adminOnly = false,
   workerOnly = false
 }) => {
@@ -27,8 +28,7 @@ const PrivateRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean; w
 };
 
 /**
- * Wrapper to extract URL params and Auth state 
- * and pass them as props to the ChatBox component
+ * Wrapper for ChatBox
  */
 const ChatRouteWrapper = () => {
   const { id } = useParams();
@@ -39,13 +39,13 @@ const ChatRouteWrapper = () => {
   }
 
   return (
-    <ChatBox 
-      chatId={id || ''} 
+    <ChatBox
+      chatId={id || ''}
       currentUser={{
         uid: user.uid,
         email: user.email || '',
         role: profile.role
-      }} 
+      }}
     />
   );
 };
@@ -59,23 +59,21 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            
-            {/* FIX: Changed ChatListPage back to Home or a placeholder 
-              to prevent the build error. Replace <Home /> with your 
-              actual list component if you have one (e.g., <ChatBox />)
-            */}
-            <Route path="/chats" element={
+
+            {/* List of all chats */}
+            <Route path="/messages" element={
               <PrivateRoute>
-                <Home /> 
+                <MessagesPage />
               </PrivateRoute>
             } />
-            
+
+            {/* Individual chat room */}
             <Route path="/chat/:id" element={
               <PrivateRoute>
                 <ChatRouteWrapper />
               </PrivateRoute>
             } />
-            
+
             <Route path="/profile" element={
               <PrivateRoute>
                 <UserProfilePage />
@@ -94,6 +92,7 @@ export default function App() {
               </PrivateRoute>
             } />
 
+            {/* Catch-all redirect */}
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </Layout>
