@@ -8,12 +8,8 @@ import {
   addDoc,
   getDocs,
   serverTimestamp,
-  setDoc,
-  doc,
-  limit
 } from 'firebase/firestore';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { db, auth } from '../firebase/config';
+import { db } from '../firebase/config';
 import { WorkerProfile, CATEGORIES, PAK_CITIES } from '../types';
 import {
   Search,
@@ -22,7 +18,6 @@ import {
   Star,
   Phone,
   Filter,
-  X,
   MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -31,7 +26,6 @@ import { useAuth } from '../hooks/useAuth';
 
 /**
  * FilterPill Component
- * Used for the sidebar categories and city selection
  */
 const FilterPill = ({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) => (
   <button
@@ -113,12 +107,15 @@ const Home: React.FC = () => {
         const chatId = snapshot.docs[0].id;
         navigate(`/chat/${chatId}`);
       } else {
+        // We add clientName and updatedAt here to ensure the Inbox works perfectly
         const newDoc = await addDoc(chatsRef, {
           clientId: user.uid,
           clientEmail: user.email,
+          clientName: profile?.name || user.email?.split('@')[0] || 'Client',
           workerId: worker.uid,
           workerName: worker.name,
           createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
           lastMessage: 'Chat started',
         });
         navigate(`/chat/${newDoc.id}`);
@@ -316,9 +313,8 @@ const Home: React.FC = () => {
           </motion.button>
         </div>
       )}
-    </div> // This closes the main div
-  ); // This closes return
-}; // This closes const Home
+    </div>
+  );
+};
 
-
-      export default Home;
+export default Home;
