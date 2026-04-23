@@ -1,145 +1,116 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { db } from '../firebase/config';
-import { 
-  collection, 
-  addDoc, 
-  query, 
-  orderBy, 
-  onSnapshot, 
-  serverTimestamp, 
-  doc, 
-  updateDoc 
-} from 'firebase/firestore';
-import { Send, MessageSquare, ShieldCheck } from 'lucide-react';
+import { Send, Paperclip, Mic, MoreVertical } from 'lucide-react';
+import { motion } from 'framer-motion';
 
-interface Message {
-  id: string;
-  text: string;
-  senderId: string;
-  senderName?: string;
-  createdAt: any;
-}
+export default function ChatPage() {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const [typing, setTyping] = useState(false);
+  const messagesEndRef = useRef(null);
 
-interface ChatBoxProps {
-  chatId: string;
-  currentUser: { uid: string; email: string; role: string };
-}
-
-const ChatBox: React.FC<ChatBoxProps> = ({ chatId, currentUser }) => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState('');
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  // 1. Listen for messages
+  // Auto scroll
   useEffect(() => {
-    const q = query(
-      collection(db, 'chats', chatId, 'messages'),
-      orderBy('createdAt', 'asc')
-    );
-
-    const unsub = onSnapshot(q, (snapshot) => {
-      const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
-      setMessages(msgs);
-    });
-
-    return () => unsub();
-  }, [chatId]);
-
-  // 2. Scroll to bottom
-  useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim()) return;
-
-    const text = newMessage;
-    setNewMessage('');
-
-    try {
-      // Add message
-      await addDoc(collection(db, 'chats', chatId, 'messages'), {
-        text,
-        senderId: currentUser.uid,
-        senderName: currentUser.email.split('@')[0], // Fallback name
-        createdAt: serverTimestamp(),
-      });
-
-      // Update main chat list info
-      await updateDoc(doc(db, 'chats', chatId), {
-        lastMessage: text,
-        updatedAt: serverTimestamp(),
-      });
-    } catch (err) {
-      console.error("Chat Error:", err);
+  // Fake typing indicator (for demo)
+  useEffect(() => {
+    if (messages.length > 0) {
+      setTyping(true);
+      setTimeout(() => setTyping(false), 1500);
     }
+  }, [messages]);
+
+  const sendMessage = () => {
+    if (!input.trim()) return;
+
+    const newMessage = {
+      id: Date.now(),
+      text: input,
+      sender: 'me',
+      time: new Date().toLocaleTimeString()
+    };
+
+    setMessages([...messages, newMessage]);
+    setInput('');
+
+    // Auto reply (demo feature)
+    setTimeout(() => {
+      setMessages(prev => [...prev, {
+        id: Date.now() + 1,
+        text: 'Thanks for your message! 🚀',
+        sender: 'other',
+        time: new Date().toLocaleTimeString()
+      }]);
+    }, 2000);
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#fdfdfd]">
-      {/* 🛡️ Secure Header Bar */}
-      <div className="px-6 py-2 border-b border-slate-100 bg-white flex items-center justify-between">
-        <div className="flex items-center gap-2 text-slate-400">
-          <ShieldCheck size={14} className="text-secondary" />
-          <span className="text-[10px] font-bold uppercase tracking-widest">Verified Session</span>
+    <div className="h-screen flex flex-col bg-gray-100">
+
+      {/* Header */}
+      <div className="bg-white shadow p-4 flex justify-between items-center">
+        <div>
+          <h2 className="font-bold text-lg">Chat Support</h2>
+          <p className="text-sm text-gray-500">Online</p>
         </div>
+        <MoreVertical />
       </div>
 
-      {/* 💬 Message List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((msg) => {
-          const isMe = msg.senderId === currentUser.uid;
-          const displayName = msg.senderName || "User";
-
-          return (
-            <div 
-              key={msg.id} 
-              className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'}`}
-            >
-              <div className={`flex flex-col max-w-[80%] ${isMe ? 'items-end' : 'items-start'}`}>
-                {/* Name Label */}
-                {!isMe && (
-                  <span className="text-[10px] font-black text-slate-400 ml-1 mb-1 uppercase">
-                    {displayName}
-                  </span>
-                )}
-                
-                {/* Bubble */}
-                <div className={`px-4 py-2.5 rounded-2xl text-sm shadow-sm ${
-                  isMe 
-                    ? 'bg-primary text-white rounded-tr-none' 
-                    : 'bg-white text-slate-800 border border-slate-200 rounded-tl-none'
-                }`}>
-                  {msg.text}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-        <div ref={scrollRef} />
-      </div>
-
-      {/* ⌨️ Input Bar */}
-      <div className="p-4 bg-white border-t border-slate-100">
-        <form onSubmit={handleSend} className="flex items-center gap-3 max-w-5xl mx-auto">
-          <input 
-            type="text"
-            className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-primary focus:bg-white transition-all"
-            placeholder="Type your message..."
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-          />
-          <button 
-            type="submit"
-            className="bg-primary text-white p-3 rounded-xl hover:opacity-90 shadow-lg shadow-primary/20"
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        {messages.map(msg => (
+          <motion.div
+            key={msg.id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`max-w-xs p-3 rounded-2xl ${
+              msg.sender === 'me'
+                ? 'ml-auto bg-blue-500 text-white'
+                : 'bg-white'
+            }`}
           >
-            <Send size={18} />
-          </button>
-        </form>
+            <p>{msg.text}</p>
+            <span className="text-xs opacity-70">{msg.time}</span>
+          </motion.div>
+        ))}
+
+        {/* Typing Indicator */}
+        {typing && (
+          <div className="bg-white px-4 py-2 rounded-xl w-fit text-sm">
+            typing...
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input */}
+      <div className="bg-white p-3 flex items-center gap-2 shadow">
+        <button className="p-2 hover:bg-gray-200 rounded-full">
+          <Paperclip size={20} />
+        </button>
+
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+          placeholder="Type your message..."
+          className="flex-1 p-2 border rounded-full outline-none"
+        />
+
+        <button className="p-2 hover:bg-gray-200 rounded-full">
+          <Mic size={20} />
+        </button>
+
+        <button
+          onClick={sendMessage}
+          className="bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600"
+        >
+          <Send size={20} />
+        </button>
       </div>
     </div>
   );
-};
-
-export default ChatBox;
+}
