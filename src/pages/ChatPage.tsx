@@ -1,149 +1,153 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
+import React, { useEffect, useState, useRef } from 'react';
+import {
+  collection,
+  addDoc,
+  query,
+  orderBy,
+  onSnapshot,
+  serverTimestamp,
+  updateDoc,
+  doc
+} from 'firebase/firestore';
 import { db } from '../firebase/config';
-import { useAuth } from '../hooks/useAuth';
-import ChatBox from '../components/ChatBox';
-import { ChevronLeft, Info, ShieldCheck, MessageCircle } from 'lucide-react';
+import { Send, Check, CheckCheck } from 'lucide-react';
 
-const ChatWindow: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { user, profile } = useAuth();
+const ChatBox = ({ chatId, currentUser }) => {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const messagesEndRef = useRef(null);
 
-  const [chatPartnerName, setChatPartnerName] = useState<string>('Loading...');
-  const [loadingChat, setLoadingChat] = useState(true);
-
+  // 🔥 REAL-TIME MESSAGES
   useEffect(() => {
-    let isMounted = true;
+    if (!chatId) return;
 
-    const fetchChatDetails = async () => {
-      if (!id || !profile) return;
-
-      try {
-        setLoadingChat(true);
-
-        const chatRef = doc(db, 'chats', id);
-        const chatSnap = await getDoc(chatRef);
-
-        if (!chatSnap.exists()) {
-          if (isMounted) setChatPartnerName('Unknown User');
-          return;
-        }
-
-        const data = chatSnap.data();
-
-        let partnerName = 'User';
-
-        if (profile.role === 'client') {
-          partnerName = data.workerName || 'Worker';
-        } else {
-          partnerName =
-            data.clientName ||
-            (data.clientEmail ? data.clientEmail.split('@')[0] : 'Client');
-        }
-
-        if (isMounted) setChatPartnerName(partnerName);
-
-      } catch (error) {
-        console.error('Error fetching chat:', error);
-        if (isMounted) setChatPartnerName('Error loading');
-      } finally {
-        if (isMounted) setLoadingChat(false);
-      }
-    };
-
-    fetchChatDetails();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [id, profile?.role]);
-
-  // 🔐 Auth loading state
-  if (!user || !profile) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-slate-50">
-        <div className="flex flex-col items-center gap-3">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <p className="text-slate-500 font-medium">Securing connection...</p>
-        </div>
-      </div>
+    const q = query(
+      collection(db, 'chats', chatId, 'messages'),
+      orderBy('createdAt', 'asc')
     );
-  }
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const msgs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      setMessages(msgs);
+
+      // ✅ Mark messages as seen (Production Logic)
+      snapshot.docs.forEach(async (docSnap) => {
+        const data = docSnap.data();
+        if (data.senderId !== currentUser.uid && !data.seen) {
+          try {
+            await updateDoc(doc(db, 'chats', chatId, 'messages', docSnap.id), {
+              seen: true
+            });
+          } catch (err) {
+            console.error("Error updating seen status:", err);
+          }
+        }
+      });
+    });
+
+    return () => unsubscribe();
+  }, [chatId, currentUser.uid]);
+
+  // Auto scroll
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // 🔥 SEND MESSAGE (Production Ready)
+  const sendMessage = async (e) => {
+    e?.preventDefault();
+    if (!input.trim()) return;
+
+    const textToSend = input;
+    setInput('');
+
+    try {
+      // 1. Add message to sub-collection
+      await addDoc(collection(db, 'chats', chatId, 'messages'), {
+        text: textToSend,
+        senderId: currentUser.uid,
+        createdAt: serverTimestamp(),
+        seen: false
+      });
+
+      // 2. Update parent chat document for the Inbox/Messages list preview
+      await updateDoc(doc(db, 'chats', chatId), {
+        lastMessage: textToSend,
+        updatedAt: serverTimestamp()
+      });
+    } catch (err) {
+      console.error("Error sending message:", err);
+    }
+  };
 
   return (
-    <div className="h-[calc(100vh-68px)] bg-slate-50 flex flex-col">
+    <div className="flex flex-col h-full bg-white overflow-hidden">
+      
+      {/* Messages List */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/30">
+        {messages.map((msg) => {
+          const isMe = msg.senderId === currentUser.uid;
 
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-sm z-10">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => navigate(-1)}
-            className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-600"
-          >
-            <ChevronLeft className="h-6 w-6" />
-          </button>
+          return (
+            <div
+              key={msg.id}
+              className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
+                className={`max-w-[80%] p-3 px-4 rounded-2xl shadow-sm relative ${
+                  isMe
+                    ? 'bg-blue-600 text-white rounded-tr-none shadow-blue-100'
+                    : 'bg-white text-gray-800 border border-gray-100 rounded-tl-none shadow-sm'
+                }`}
+              >
+                <p className="text-sm leading-relaxed">{msg.text}</p>
 
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-              <MessageCircle className="h-5 w-5" />
-            </div>
-
-            <div>
-              <h1 className="text-sm font-bold text-slate-900 leading-tight">
-                {loadingChat ? 'Loading...' : chatPartnerName}
-              </h1>
-              <div className="flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
-                <span className="text-[11px] text-slate-500 uppercase font-semibold tracking-wider">
-                  Active Conversation
-                </span>
+                {/* Production Status Icons */}
+                {isMe && (
+                  <div className="flex justify-end items-center mt-1 opacity-80">
+                    {msg.seen ? (
+                      <CheckCheck size={13} className="text-blue-100" />
+                    ) : (
+                      <Check size={13} className="text-blue-100" />
+                    )}
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        </div>
-
-        <div className="hidden sm:flex items-center gap-4 text-slate-400">
-          <div className="flex items-center gap-1 text-[11px] font-bold px-2 py-1 bg-slate-100 rounded text-slate-500">
-            <ShieldCheck className="h-3 w-3" />
-            ENCRYPTED
-          </div>
-          <button className="hover:text-primary transition-colors">
-            <Info className="h-5 w-5" />
-          </button>
-        </div>
+          );
+        })}
+        <div ref={messagesEndRef} className="h-2" />
       </div>
 
-      {/* Chat Area */}
-      <main className="flex-grow overflow-hidden flex flex-col relative">
-        <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+      {/* Input Bar - Standardized & Fixed */}
+      <div className="p-4 border-t bg-white shrink-0">
+        <form 
+          onSubmit={sendMessage}
+          className="max-w-5xl mx-auto flex gap-3 items-center"
+        >
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Type your message..."
+            className="flex-1 bg-gray-100 border-none p-3 px-5 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm transition-all"
+          />
 
-        <div className="flex-grow max-w-5xl w-full mx-auto p-4 md:p-6 flex flex-col z-10">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 flex-grow flex flex-col overflow-hidden">
-            {id ? (
-              <ChatBox 
-                chatId={id} 
-                currentUser={{
-                  uid: user.uid,
-                  email: user.email || '',
-                  role: profile.role || 'client'
-                }} 
-              />
-            ) : (
-              <div className="flex-grow flex items-center justify-center text-slate-400">
-                Invalid chat.
-              </div>
-            )}
-          </div>
-
-          <p className="text-center text-[10px] text-slate-400 mt-4 uppercase tracking-widest font-medium">
-            Professional Work Platform • Secure Messaging
-          </p>
-        </div>
-      </main>
+          <button
+            type="submit"
+            disabled={!input.trim()}
+            className="bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-700 disabled:opacity-40 transition-all flex items-center justify-center shrink-0 shadow-lg shadow-blue-100"
+          >
+            <Send size={18} />
+          </button>
+        </form>
+      </div>
     </div>
   );
 };
 
-export default ChatWindow;
+export default ChatBox;
