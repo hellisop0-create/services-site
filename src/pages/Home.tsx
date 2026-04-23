@@ -1,13 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { collection, query, where, onSnapshot, orderBy, addDoc, getDocs, serverTimestamp, setDoc, doc } from 'firebase/firestore';
+import { 
+  collection, 
+  query, 
+  where, 
+  onSnapshot, 
+  orderBy, 
+  addDoc, 
+  getDocs, 
+  serverTimestamp, 
+  setDoc, 
+  doc,
+  limit 
+} from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { db, auth } from '../firebase/config';
 import { WorkerProfile, CATEGORIES, PAK_CITIES } from '../types';
-import { Search, MapPin, Briefcase, Star, Phone, Filter, X, MessageSquare } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-
 import { 
   Search, 
   MapPin, 
@@ -16,10 +23,28 @@ import {
   Phone, 
   Filter, 
   X, 
-  MessageSquare // <--- Add this!
+  MessageSquare 
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 
-const navigate = useNavigate(); // Make sure this line exists inside the Home component
+/**
+ * FilterPill Component
+ * Used for the sidebar categories and city selection
+ */
+const FilterPill = ({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) => (
+  <button
+    onClick={onClick}
+    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
+      active 
+        ? 'bg-secondary text-white font-bold shadow-sm' 
+        : 'text-high-muted hover:bg-high-bg hover:text-primary'
+    }`}
+  >
+    {label}
+  </button>
+);
 
 const Home: React.FC = () => {
   const { user, profile } = useAuth();
@@ -32,6 +57,7 @@ const Home: React.FC = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [chatCount, setChatCount] = useState(0);
 
+  // Fetch Workers
   useEffect(() => {
     const q = query(
       collection(db, 'workers'),
@@ -48,6 +74,7 @@ const Home: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
+  // Fetch Chat Count
   useEffect(() => {
     if (!user) return;
     const q = query(
@@ -59,63 +86,53 @@ const Home: React.FC = () => {
   }, [user, profile]);
 
   const handleStartChat = async (e: React.MouseEvent, worker: WorkerProfile) => {
-  e.preventDefault();
-  e.stopPropagation();
+    e.preventDefault();
+    e.stopPropagation();
 
-  console.log("--- Chat Debug Start ---");
-  console.log("Worker UID:", worker.uid);
-  console.log("Current User UID:", user?.uid);
-
-  if (!user) {
-    alert("Please login first");
-    return;
-  }
-
-  if (user.uid === worker.uid) {
-    alert("You cannot chat with yourself.");
-    return;
-  }
-
-  try {
-    const chatsRef = collection(db, 'chats');
-    
-    // We search for a chat where YOU are the client and THEY are the worker
-    console.log("Searching for existing chat...");
-    const q = query(
-      chatsRef,
-      where('clientId', '==', user.uid),
-      where('workerId', '==', worker.uid)
-    );
-
-    const snapshot = await getDocs(q);
-    console.log("Query complete. Found existing docs:", snapshot.size);
-
-    if (!snapshot.empty) {
-      const chatId = snapshot.docs[0].id;
-      console.log("Navigating to existing chat:", chatId);
-      navigate(`/chat/${chatId}`);
-    } else {
-      console.log("No existing chat found. Creating new one...");
-      const newDoc = await addDoc(chatsRef, {
-        clientId: user.uid,
-        clientEmail: user.email,
-        workerId: worker.uid,
-        workerName: worker.name,
-        createdAt: serverTimestamp(),
-        lastMessage: 'Chat started',
-      });
-      console.log("New chat created with ID:", newDoc.id);
-      navigate(`/chat/${newDoc.id}`);
+    if (!user) {
+      alert("Please login first");
+      return;
     }
-  } catch (err: any) {
-    console.error("FAILED AT STEP:", err);
-    alert("System Error: " + err.message);
-  }
-};
+
+    if (user.uid === worker.uid) {
+      alert("You cannot chat with yourself.");
+      return;
+    }
+
+    try {
+      const chatsRef = collection(db, 'chats');
+      
+      const q = query(
+        chatsRef,
+        where('clientId', '==', user.uid),
+        where('workerId', '==', worker.uid)
+      );
+
+      const snapshot = await getDocs(q);
+
+      if (!snapshot.empty) {
+        const chatId = snapshot.docs[0].id;
+        navigate(`/chat/${chatId}`);
+      } else {
+        const newDoc = await addDoc(chatsRef, {
+          clientId: user.uid,
+          clientEmail: user.email,
+          workerId: worker.uid,
+          workerName: worker.name,
+          createdAt: serverTimestamp(),
+          lastMessage: 'Chat started',
+        });
+        navigate(`/chat/${newDoc.id}`);
+      }
+    } catch (err: any) {
+      console.error("FAILED AT STEP:", err);
+      alert("System Error: " + err.message);
+    }
+  };
 
   const seedTestData = async () => {
     try {
-      const workerEmail = "worker_test@example.com";
+      const workerEmail = `worker_${Date.now()}@example.com`;
       const workerPass = "password123";
       
       const workerCred = await createUserWithEmailAndPassword(auth, workerEmail, workerPass);
@@ -140,7 +157,7 @@ const Home: React.FC = () => {
         role: 'worker'
       });
 
-      alert("Worker test data created! Now log out and create a regular client account to chat with them.");
+      alert("Worker test data created!");
     } catch (err: any) {
       console.error(err);
       alert("Error seeding data: " + err.message);
@@ -165,6 +182,7 @@ const Home: React.FC = () => {
         🔨 SEED WORKER DATA
       </button>
 
+      {/* Sidebar - Desktop */}
       <aside className="w-full md:w-[260px] bg-white border-r border-high-border p-6 hidden md:flex flex-col gap-8 shrink-0">
         <div className="space-y-4">
           <div className="flex items-center gap-2 mb-2">
@@ -201,6 +219,7 @@ const Home: React.FC = () => {
         </div>
       </aside>
 
+      {/* Main Grid */}
       <main className="flex-grow p-6 overflow-y-auto">
         <div className="max-w-6xl mx-auto space-y-6">
           <div className="flex justify-between items-end border-b border-high-border pb-4">
@@ -221,6 +240,7 @@ const Home: React.FC = () => {
             </button>
           </div>
 
+          {/* Mobile Filters */}
           <AnimatePresence>
             {showFilters && (
               <motion.div
@@ -260,10 +280,8 @@ const Home: React.FC = () => {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   key={worker.uid}
-                  className="bg-white rounded-xl border border-high-border p-4 hover:shadow-lg transition-all relative group flex flex-col"
+                  className="bg-white rounded-xl border border-high-border p-4 hover:shadow-lg transition-all relative flex flex-col"
                 >
-                  <div className="absolute top-4 right-4 h-2.5 w-2.5 rounded-full bg-accent border-2 border-white shadow-sm ring-1 ring-accent/20"></div>
-
                   <div className="flex gap-4 mb-4 items-start">
                     <img
                       src={worker.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${worker.uid}`}
@@ -298,16 +316,14 @@ const Home: React.FC = () => {
                       href={`tel:${worker.phoneNumber}`}
                       className="w-full bg-secondary text-white rounded-lg py-2.5 text-sm font-bold text-center hover:bg-secondary/90 transition-all flex items-center justify-center gap-2"
                     >
-                      <Phone className="h-4 w-4" />
-                      Call
+                      <Phone className="h-4 w-4" /> Call
                     </a>
                     <button
                       type="button"
                       onClick={(e) => handleStartChat(e, worker)}
                       className="w-full bg-primary text-white rounded-lg py-2.5 text-sm font-bold text-center hover:bg-primary/90 transition-all flex items-center justify-center gap-2"
                     >
-                      <MessageSquare className="h-4 w-4" />
-                      Chat
+                      <MessageSquare className="h-4 w-4" /> Chat
                     </button>
                   </div>
                 </motion.div>
@@ -317,52 +333,48 @@ const Home: React.FC = () => {
         </div>
       </main>
 
+      {/* Floating Chat Button */}
       {user && (
-  <div className="fixed bottom-8 right-8 z-[999] pointer-events-auto">
-    <motion.button
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-      onClick={async () => {
-        try {
-          // 1. Reference the chats collection
-          const chatsRef = collection(db, 'chats');
-          
-          // 2. Query for chats where the current user is either the client or the worker
-          const q = query(
-            chatsRef,
-            where(profile?.role === 'worker' ? 'workerId' : 'clientId', '==', user.uid),
-            orderBy('createdAt', 'desc'),
-            limit(1)
-          );
+        <div className="fixed bottom-8 right-8 z-[999] pointer-events-auto">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={async () => {
+              try {
+                const chatsRef = collection(db, 'chats');
+                const q = query(
+                  chatsRef,
+                  where(profile?.role === 'worker' ? 'workerId' : 'clientId', '==', user.uid),
+                  orderBy('createdAt', 'desc'),
+                  limit(1)
+                );
 
-          const snap = await getDocs(q);
+                const snap = await getDocs(q);
 
-          if (!snap.empty) {
-            // 3. If a chat exists, go to that specific chat ID
-            const latestChatId = snap.docs[0].id;
-            navigate(`/chat/${latestChatId}`);
-          } else {
-            // 4. If no chats exist, tell the user
-            alert("You don't have any active messages yet. Choose a professional to start a conversation!");
-          }
-        } catch (error) {
-          console.error("Error fetching latest chat:", error);
-        }
-      }}
-      className="relative p-4 bg-primary text-white rounded-full shadow-2xl border border-white/20 flex items-center justify-center group overflow-hidden"
-    >
-      {/* Visual background effect */}
-      <div className="absolute inset-0 bg-gradient-to-tr from-primary to-secondary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-      
-      <MessageSquare className="h-6 w-6 relative z-10" />
-      
-      {chatCount > 0 && (
-        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white z-20">
-          {chatCount}
-        </span>
+                if (!snap.empty) {
+                  const latestChatId = snap.docs[0].id;
+                  navigate(`/chat/${latestChatId}`);
+                } else {
+                  alert("You don't have any active messages yet. Choose a professional to start a conversation!");
+                }
+              } catch (error) {
+                console.error("Error fetching latest chat:", error);
+              }
+            }}
+            className="relative p-4 bg-primary text-white rounded-full shadow-2xl border border-white/20 flex items-center justify-center group overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-gradient-to-tr from-primary to-secondary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <MessageSquare className="h-6 w-6 relative z-10" />
+            {chatCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white z-20">
+                {chatCount}
+              </span>
+            )}
+          </motion.button>
+        </div>
       )}
-    </motion.button>
-  </div>
-)}
+    </div>
+  );
+};
 
 export default Home;

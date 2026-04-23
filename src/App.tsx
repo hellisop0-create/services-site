@@ -9,8 +9,6 @@ import ChatBox from './pages/ChatBox';
 import WorkerProfileForm from './pages/WorkerProfileForm';
 import AdminDashboard from './pages/AdminDashboard';
 import UserProfilePage from './pages/UserProfilePage';
-// Note: Assuming ChatListPage is the correct component for the chats route
-import ChatListPage from './pages/ChatListPage'; 
 
 // Helper component for protected routes
 const PrivateRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean; workerOnly?: boolean }> = ({ 
@@ -62,42 +60,40 @@ export default function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             
-            {/* Unified Chat List Route */}
+            {/* FIX: Changed ChatListPage back to Home or a placeholder 
+              to prevent the build error. Replace <Home /> with your 
+              actual list component if you have one (e.g., <ChatBox />)
+            */}
             <Route path="/chats" element={
               <PrivateRoute>
-                <ChatListPage />
+                <Home /> 
               </PrivateRoute>
             } />
             
-            {/* Updated Chat Route with Wrapper */}
             <Route path="/chat/:id" element={
               <PrivateRoute>
                 <ChatRouteWrapper />
               </PrivateRoute>
             } />
             
-            {/* User Profile */}
             <Route path="/profile" element={
               <PrivateRoute>
                 <UserProfilePage />
               </PrivateRoute>
             } />
 
-            {/* Worker Profile Edit */}
             <Route path="/profile/edit" element={
               <PrivateRoute workerOnly>
                 <WorkerProfileForm />
               </PrivateRoute>
             } />
 
-            {/* Admin Dashboard */}
             <Route path="/admin" element={
               <PrivateRoute adminOnly>
                 <AdminDashboard />
               </PrivateRoute>
             } />
 
-            {/* Catch-all */}
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </Layout>
