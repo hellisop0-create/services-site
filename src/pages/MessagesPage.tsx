@@ -11,21 +11,30 @@ const MessagesPage = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  // Inside MessagesPage.tsx
   useEffect(() => {
-    if (!user) return;
+    if (!user || !profile) return;
 
-    // Query chats where user is either client or worker
+    const chatsRef = collection(db, 'chats');
+
+    // Use 'createdAt' if you haven't implemented 'updatedAt' in your chat logic yet
     const q = query(
-      collection(db, 'chats'),
-      where(profile?.role === 'worker' ? 'workerId' : 'clientId', '==', user.uid),
-      orderBy('updatedAt', 'desc') // Ensure you update 'updatedAt' when sending messages
+      chatsRef,
+      where(profile.role === 'worker' ? 'workerId' : 'clientId', '==', user.uid),
+      orderBy('createdAt', 'desc')
     );
 
-    const unsub = onSnapshot(q, (snap) => {
-      const chatList = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setChats(chatList);
-      setLoading(false);
-    });
+    const unsub = onSnapshot(q,
+      (snap) => {
+        const chatList = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setChats(chatList);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Firestore Error:", error);
+        setLoading(false); // Stop loading even if there's an error
+      }
+    );
 
     return () => unsub();
   }, [user, profile]);
@@ -47,7 +56,7 @@ const MessagesPage = () => {
       ) : (
         <div className="space-y-3">
           {chats.map((chat: any) => (
-            <div 
+            <div
               key={chat.id}
               onClick={() => navigate(`/chat/${chat.id}`)}
               className="bg-white p-4 rounded-2xl border border-gray-100 flex items-center gap-4 hover:shadow-md transition-all cursor-pointer group"
