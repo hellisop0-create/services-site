@@ -1,29 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  collection, 
-  query, 
-  where, 
-  onSnapshot, 
-  orderBy, 
-  addDoc, 
-  getDocs, 
-  serverTimestamp, 
-  setDoc, 
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  orderBy,
+  addDoc,
+  getDocs,
+  serverTimestamp,
+  setDoc,
   doc,
-  limit 
+  limit
 } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { db, auth } from '../firebase/config';
 import { WorkerProfile, CATEGORIES, PAK_CITIES } from '../types';
-import { 
-  Search, 
-  MapPin, 
-  Briefcase, 
-  Star, 
-  Phone, 
-  Filter, 
-  X, 
-  MessageSquare 
+import {
+  Search,
+  MapPin,
+  Briefcase,
+  Star,
+  Phone,
+  Filter,
+  X,
+  MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
@@ -36,11 +36,10 @@ import { useAuth } from '../hooks/useAuth';
 const FilterPill = ({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) => (
   <button
     onClick={onClick}
-    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-      active 
-        ? 'bg-secondary text-white font-bold shadow-sm' 
+    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${active
+        ? 'bg-secondary text-white font-bold shadow-sm'
         : 'text-high-muted hover:bg-high-bg hover:text-primary'
-    }`}
+      }`}
   >
     {label}
   </button>
@@ -101,7 +100,7 @@ const Home: React.FC = () => {
 
     try {
       const chatsRef = collection(db, 'chats');
-      
+
       const q = query(
         chatsRef,
         where('clientId', '==', user.uid),
@@ -134,7 +133,7 @@ const Home: React.FC = () => {
     try {
       const workerEmail = `worker_${Date.now()}@example.com`;
       const workerPass = "password123";
-      
+
       const workerCred = await createUserWithEmailAndPassword(auth, workerEmail, workerPass);
       const workerUid = workerCred.user.uid;
 
@@ -175,7 +174,7 @@ const Home: React.FC = () => {
 
   return (
     <div className="flex flex-col md:flex-row min-h-[calc(100vh-68px)] relative">
-      <button 
+      <button
         onClick={seedTestData}
         className="fixed top-24 left-4 z-[100] bg-red-600 text-white p-2 rounded shadow-xl text-xs font-bold"
       >
@@ -334,37 +333,18 @@ const Home: React.FC = () => {
       </main>
 
       {/* Floating Chat Button */}
+      {/* Updated Floating Chat Button in Home.tsx */}
       {user && (
         <div className="fixed bottom-8 right-8 z-[999] pointer-events-auto">
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={async () => {
-              try {
-                const chatsRef = collection(db, 'chats');
-                const q = query(
-                  chatsRef,
-                  where(profile?.role === 'worker' ? 'workerId' : 'clientId', '==', user.uid),
-                  orderBy('createdAt', 'desc'),
-                  limit(1)
-                );
-
-                const snap = await getDocs(q);
-
-                if (!snap.empty) {
-                  const latestChatId = snap.docs[0].id;
-                  navigate(`/chat/${latestChatId}`);
-                } else {
-                  alert("You don't have any active messages yet. Choose a professional to start a conversation!");
-                }
-              } catch (error) {
-                console.error("Error fetching latest chat:", error);
-              }
-            }}
+            onClick={() => navigate('/messages')} // ✅ Professional approach: Go to the Inbox
             className="relative p-4 bg-primary text-white rounded-full shadow-2xl border border-white/20 flex items-center justify-center group overflow-hidden"
           >
             <div className="absolute inset-0 bg-gradient-to-tr from-primary to-secondary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             <MessageSquare className="h-6 w-6 relative z-10" />
+
             {chatCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center border-2 border-white z-20">
                 {chatCount}
