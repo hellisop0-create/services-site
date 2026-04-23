@@ -11,20 +11,28 @@ const MessagesPage = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  // --- REPLACE YOUR OLD USEEFFECT WITH THIS ONE ---
   useEffect(() => {
     if (!user) return;
 
     const chatsRef = collection(db, 'chats');
 
+    // This version is "loose" to find your messages even if roles/sorting are broken
     const unsub = onSnapshot(chatsRef, (snap) => {
       const allChats = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
-      // Filter chats where I am either the client or the worker
+      // Filter manually to ensure we see the data
       const myChats = allChats.filter((chat: any) => 
         chat.clientId === user.uid || chat.workerId === user.uid
       );
 
+      console.log("Database Sync - Total Chats:", allChats.length);
+      console.log("Matching your ID:", myChats.length);
+
       setChats(myChats);
+      setLoading(false);
+    }, (err) => {
+      console.error("Firestore Sync Error:", err);
       setLoading(false);
     });
 
